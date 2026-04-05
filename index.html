@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduQuiz • Algoritma Pemrograman</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&family=Inter:wght@400;600&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .title-font { font-family: 'Comic Neue', cursive; }
+        .option-btn { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .option-btn:hover { transform: scale(1.05); }
+        .timer-circle { transition: stroke-dashoffset 1s linear; }
+        .confetti {
+            position: absolute; width: 12px; height: 12px; border-radius: 50%;
+            animation: fall 4s linear forwards;
+        }
+        @keyframes fall {
+            to { transform: translateY(900px) rotate(720deg); opacity: 0; }
+        }
+        .sending-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 9999;
+        }
+        .spinner {
+            width: 60px; height: 60px; border: 6px solid rgba(255,255,255,0.2);
+            border-top-color: #eab308; border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-indigo-950 via-purple-950 to-pink-950 text-white min-h-screen">
+
+    <!-- ⚙️ KONFIGURASI: Ganti URL ini dengan URL Google Apps Script kamu -->
+    <script>
+        const GOOGLE_SCRIPT_URL = "GANTI_DENGAN_URL_APPhttps://script.google.com/macros/s/AKfycbyqZCHwEJW4yhcqSAVl7sqZ5Gc6CRDfrYg-v9yMrW5GWxHG_3-WxpBiJF2WEwvqr2hf/execS_SCRIPT_KAMU";
+        // Contoh: "https://script.google.com/macros/s/AKfycb.../exec"
+    </script>
+
+    <!-- HEADER -->
+    <div class="max-w-5xl mx-auto px-5 py-6 flex justify-between items-center">
+        <div class="flex items-center gap-3">
+            <div class="w-14 h-14 bg-yellow-400 text-indigo-950 rounded-3xl flex items-center justify-center text-5xl">🧩</div>
+            <div>
+                <h1 class="title-font text-5xl font-bold text-yellow-300">Quiz Infor</h1>
+                <p class="text-pink-200">Algoritma Pemrograman SMP</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- NAMA SCREEN -->
+    <div id="name-screen" class="max-w-md mx-auto px-5 py-20 text-center">
+        <div class="text-8xl mb-8">👋</div>
+        <h2 class="title-font text-5xl font-bold text-yellow-300 mb-8">Siapa namamu?</h2>
+        <input id="nama-input" type="text" placeholder="Masukkan nama lengkap" 
+               class="w-full bg-white/10 border border-yellow-300 rounded-3xl px-8 py-6 text-2xl text-center focus:outline-none focus:border-yellow-400 mb-6">
+        <button onclick="lanjutKeKelas()" 
+                class="w-full py-7 bg-gradient-to-r from-yellow-400 to-pink-400 text-indigo-950 font-bold text-3xl rounded-3xl">
+            Lanjut
+        </button>
+    </div>
+
+    <!-- PILIH KELAS -->
+    <div id="kelas-screen" class="hidden max-w-md mx-auto px-5 py-20 text-center">
+        <h2 class="title-font text-5xl font-bold text-yellow-300 mb-10">Pilih Kelas</h2>
+        <div class="space-y-6">
+            <button onclick="pilihKelas(7)" class="w-full py-8 bg-gradient-to-r from-cyan-400 to-blue-400 text-indigo-950 font-bold text-3xl rounded-3xl">Kelas 7</button>
+            <button onclick="pilihKelas(8)" class="w-full py-8 bg-gradient-to-r from-purple-400 to-pink-400 text-indigo-950 font-bold text-3xl rounded-3xl">Kelas 8</button>
+        </div>
+    </div>
+
+    <!-- QUIZ SCREEN -->
+    <div id="quiz-screen" class="hidden max-w-5xl mx-auto px-5 py-8">
+        <div class="flex justify-between items-center mb-8">
+            <div class="flex items-center gap-4">
+                <span id="q-number" class="text-4xl font-bold text-yellow-300">1</span>
+                <span class="text-white/60">/ 15</span>
+            </div>
+            <div>
+                <span class="text-sm text-white/60">Nama:</span>
+                <span id="nama-player" class="font-semibold text-pink-300"></span>
+            </div>
+            <div class="text-right">
+                <div class="text-sm text-white/60">Skor</div>
+                <div id="live-score" class="text-4xl font-bold text-pink-300">0</div>
+            </div>
+        </div>
+
+        <div class="flex justify-center mb-8">
+            <div class="relative w-28 h-28">
+                <svg class="w-28 h-28 -rotate-90" viewBox="0 0 42 42">
+                    <circle cx="21" cy="21" r="18" fill="none" stroke="#ffffff15" stroke-width="7"/>
+                    <circle id="timer-progress" cx="21" cy="21" r="18" fill="none" 
+                            stroke="#eab308" stroke-width="7" stroke-dasharray="113" 
+                            stroke-dashoffset="113" stroke-linecap="round" class="timer-circle"/>
+                </svg>
+                <div id="timer" class="absolute inset-0 flex items-center justify-center text-5xl font-bold">60</div>
+            </div>
+        </div>
+
+        <div class="bg-white/10 backdrop-blur-2xl rounded-3xl p-10">
+            <div id="question" class="text-3xl font-medium leading-tight text-center min-h-[140px]"></div>
+            <div id="options-container" class="mt-12 space-y-4"></div>
+        </div>
+
+        <div id="feedback-area" class="hidden mt-8 text-center text-2xl font-medium"></div>
+        
+        <button onclick="nextQuestion()" id="next-btn"
+                class="hidden w-full mt-8 py-7 bg-yellow-400 hover:bg-yellow-300 text-indigo-950 font-bold text-2xl rounded-3xl">
+            Lanjut ke Soal Berikutnya →
+        </button>
+    </div>
+
+    <!-- RESULT SCREEN -->
+    <div id="result-screen" class="hidden max-w-4xl mx-auto px-5 py-12 text-center">
+        <div id="result-emoji" class="text-9xl mb-6"></div>
+        <h2 id="result-title" class="title-font text-6xl font-bold mb-2"></h2>
+        <p id="result-subtitle" class="text-pink-200 text-3xl mb-10"></p>
+        
+        <div class="inline-block bg-white/10 backdrop-blur-2xl rounded-3xl px-16 py-10 mb-10">
+            <div id="final-score" class="text-8xl font-bold text-yellow-300">0</div>
+            <p class="text-2xl text-white/70">dari 15 pertanyaan</p>
+        </div>
+
+        <div id="star-container" class="flex justify-center gap-4 text-6xl mb-6"></div>
+
+        <!-- Status pengiriman nilai -->
+        <div id="send-status" class="mb-8 text-xl px-6 py-4 rounded-2xl bg-white/10 hidden"></div>
+
+        <button onclick="exportPDF()" 
+                class="px-12 py-6 bg-white/10 hover:bg-white/20 rounded-3xl text-xl flex items-center gap-3 mx-auto mb-6">
+            <i class="fa-solid fa-download"></i> Unduh Sertifikat Skor (PDF)
+        </button>
+
+        <div class="flex gap-4 justify-center">
+            <button onclick="restartQuiz()" class="px-12 py-6 bg-yellow-400 text-indigo-950 font-bold text-xl rounded-3xl">Coba Lagi</button>
+            <button onclick="backToNameScreen()" class="px-12 py-6 bg-white/10 hover:bg-white/20 text-xl rounded-3xl">Kembali ke Awal</button>
+        </div>
+    </div>
+
+    <!-- LOADING OVERLAY -->
+    <div id="sending-overlay" class="sending-overlay hidden">
+        <div class="spinner mb-6"></div>
+        <p class="text-2xl text-yellow-300 font-bold">Mengirim nilai ke server...</p>
+        <p class="text-white/60 mt-2">Mohon tunggu sebentar</p>
+    </div>
+
+    <script>
+        // Audio
+        let audioCtx;
+        function playCorrectSound() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(800, audioCtx.currentTime);
+            gain.gain.value = 0.3;
+            oscillator.connect(gain).connect(audioCtx.destination);
+            oscillator.start();
+            setTimeout(() => { oscillator.stop(); }, 180);
+        }
+
+        function playWrongSound() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            oscillator.type = 'sawtooth';
+            oscillator.frequency.setValueAtTime(200, audioCtx.currentTime);
+            gain.gain.value = 0.2;
+            oscillator.connect(gain).connect(audioCtx.destination);
+            oscillator.start();
+            setTimeout(() => { oscillator.stop(); }, 300);
+        }
+
+        // Data Soal
+        const quizData = {
+            7: [
+                {q:"Apa itu algoritma?", opt:["Cara acak", "Urutan langkah jelas untuk menyelesaikan masalah", "Bahasa pemrograman", "Perangkat keras"], ans:1, exp:"Algoritma adalah urutan langkah yang terstruktur dan jelas."},
+                {q:"Contoh algoritma sehari-hari adalah?", opt:["Main game tanpa aturan", "Cara mencuci tangan", "Menyanyi", "Tidur"], ans:1, exp:"Cara mencuci tangan memiliki urutan langkah yang jelas."},
+                {q:"Simbol oval di flowchart berfungsi untuk?", opt:["Proses", "Keputusan", "Mulai dan Selesai", "Input"], ans:2, exp:"Oval digunakan untuk Start dan End."},
+                {q:"Sequencing dalam algoritma artinya?", opt:["Pengulangan", "Urutan langkah berurutan", "Keputusan", "Penyimpanan data"], ans:1, exp:"Sequencing adalah melakukan langkah secara berurutan."},
+                {q:"Simbol belah ketupat di flowchart digunakan untuk?", opt:["Proses", "Keputusan (Ya/Tidak)", "Output", "Mulai"], ans:1, exp:"Belah ketupat = keputusan."},
+                {q:"Apa fungsi algoritma dalam pemrograman?", opt:["Membuat gambar", "Memberi petunjuk langkah yang jelas", "Menghias halaman", "Menjalankan musik"], ans:1, exp:"Algoritma memberikan langkah-langkah yang jelas."},
+                {q:"Flowchart adalah?", opt:["Bahasa pemrograman", "Gambar yang menggambarkan alur algoritma", "Jenis virus", "Perangkat keras"], ans:1, exp:"Flowchart adalah diagram alur."},
+                {q:"Apa itu decomposition?", opt:["Menggabungkan masalah", "Memecah masalah besar menjadi bagian kecil", "Menghapus data", "Mengulang langkah"], ans:1, exp:"Decomposition = memecah masalah menjadi bagian kecil."},
+                {q:"Pseudocode adalah?", opt:["Kode langsung dijalankan", "Cara menulis algoritma dengan bahasa sederhana", "Gambar saja", "Bahasa Inggris"], ans:1, exp:"Pseudocode mudah dipahami manusia."},
+                {q:"Apa yang dimaksud dengan iteration?", opt:["Keputusan", "Pengulangan langkah", "Urutan", "Input"], ans:1, exp:"Iteration adalah pengulangan."},
+                {q:"Simbol panah di flowchart berarti?", opt:["Proses", "Alur arah langkah", "Keputusan", "Mulai"], ans:1, exp:"Panah menunjukkan arah alur."},
+                {q:"Contoh algoritma sederhana adalah?", opt:["Resep masak", "Membaca buku", "Main bola", "Semua benar"], ans:3, exp:"Resep masak adalah algoritma."},
+                {q:"Abstraction dalam berpikir komputasional artinya?", opt:["Mengambil yang penting saja", "Menulis kode", "Menggambar", "Menghitung"], ans:0, exp:"Abstraction = fokus pada hal penting."},
+                {q:"Apa yang harus dilakukan pertama dalam membuat algoritma?", opt:["Menulis kode", "Memahami masalah", "Menjalankan program", "Membeli komputer"], ans:1, exp:"Pertama adalah memahami masalah."},
+                {q:"Algoritma yang baik harus?", opt:["Panjang dan rumit", "Jelas, terstruktur, dan benar", "Hanya gambar", "Tidak perlu urutan"], ans:1, exp:"Harus jelas dan terstruktur."}
+            ],
+            8: [
+                {q:"Pseudocode untuk menghitung luas persegi panjang?", opt:["luas = panjang × lebar", "print luas", "if panjang > 0", "Semua benar"], ans:0, exp:"luas = panjang × lebar adalah pseudocode yang benar."},
+                {q:"Decision dalam algoritma berarti?", opt:["Urutan", "Keputusan menggunakan if", "Pengulangan", "Output"], ans:1, exp:"Decision = membuat pilihan."},
+                {q:"Simbol persegi panjang di flowchart adalah?", opt:["Keputusan", "Proses perhitungan", "Mulai", "Output"], ans:1, exp:"Kotak persegi = proses."},
+                {q:"Apa yang terjadi jika urutan algoritma salah?", opt:["Tetap benar", "Hasil bisa salah", "Komputer otomatis memperbaiki", "Tidak ada efek"], ans:1, exp:"Urutan salah dapat menyebabkan hasil salah."},
+                {q:"Contoh decision (keputusan) sederhana?", opt:["if nilai >= 75 then Lulus", "luas = p × l", "print('Halo')", "loop 10 kali"], ans:0, exp:"if-then adalah contoh decision."},
+                {q:"Iteration biasanya menggunakan?", opt:["if", "loop / pengulangan", "input", "output"], ans:1, exp:"Iteration = pengulangan."},
+                {q:"Apa fungsi output dalam algoritma?", opt:["Menerima data", "Menampilkan hasil", "Menghitung", "Menyimpan"], ans:1, exp:"Output menampilkan hasil akhir."},
+                {q:"Pseudocode yang benar untuk 'jika umur > 17 maka boleh ujian' adalah?", opt:["if umur > 17 then boleh ujian", "umur = 17", "print umur", "loop umur"], ans:0, exp:"if condition then action."},
+                {q:"Apa itu algoritma sorting?", opt:["Mengurutkan data", "Menghitung jumlah", "Menggambar", "Menjalankan game"], ans:0, exp:"Sorting = mengurutkan data."},
+                {q:"Contoh algoritma searching?", opt:["Mencari nama di daftar", "Menghitung nilai", "Menggambar rumah", "Main musik"], ans:0, exp:"Searching = mencari data."},
+                {q:"Flowchart lebih mudah dipahami karena?", opt:["Menggunakan gambar dan simbol", "Hanya teks", "Sangat panjang", "Harus coding"], ans:0, exp:"Flowchart visual."},
+                {q:"Apa yang dimaksud dengan efficient algorithm?", opt:["Cepat dan hemat sumber daya", "Panjang", "Rumit", "Berwarna"], ans:0, exp:"Efisien = cepat dan hemat."},
+                {q:"Input dalam algoritma berfungsi untuk?", opt:["Menampilkan hasil", "Menerima data dari pengguna", "Menghitung", "Mengulang"], ans:1, exp:"Input menerima data."},
+                {q:"Contoh algoritma sehari-hari yang kompleks?", opt:["Cara pergi ke sekolah", "Menghitung 1+1", "Tidur", "Makan"], ans:0, exp:"Cara pergi ke sekolah memiliki banyak langkah."},
+                {q:"Mengapa algoritma penting dalam pemrograman?", opt:["Memberi petunjuk jelas kepada komputer", "Hanya untuk hiasan", "Tidak penting", "Hanya untuk guru"], ans:0, exp:"Komputer butuh langkah yang jelas."}
+            ]
+        };
+
+        let currentKelas = 7;
+        let questions = [];
+        let currentIndex = 0;
+        let score = 0;
+        let timer = 60;
+        let timerInterval = null;
+        let playerName = "";
+        let startTime = null;
+
+        function lanjutKeKelas() {
+            playerName = document.getElementById("nama-input").value.trim();
+            if (!playerName) {
+                alert("Silakan masukkan nama kamu terlebih dahulu!");
+                return;
+            }
+            document.getElementById("name-screen").classList.add("hidden");
+            document.getElementById("kelas-screen").classList.remove("hidden");
+        }
+
+        function pilihKelas(kelas) {
+            currentKelas = kelas;
+            questions = [...quizData[currentKelas]];
+            currentIndex = 0;
+            score = 0;
+            startTime = new Date();
+
+            document.getElementById("kelas-screen").classList.add("hidden");
+            document.getElementById("quiz-screen").classList.remove("hidden");
+            document.getElementById("nama-player").textContent = playerName;
+            showQuestion();
+        }
+
+        function showQuestion() {
+            clearInterval(timerInterval);
+            timer = 60;
+
+            const q = questions[currentIndex];
+            document.getElementById("q-number").textContent = currentIndex + 1;
+            document.getElementById("live-score").textContent = score;
+            document.getElementById("question").textContent = q.q;
+
+            const container = document.getElementById("options-container");
+            container.innerHTML = "";
+
+            q.opt.forEach((option, i) => {
+                const btn = document.createElement("button");
+                btn.className = "option-btn w-full text-left px-8 py-7 bg-white/10 hover:bg-yellow-400 hover:text-indigo-950 rounded-3xl text-xl border border-transparent";
+                btn.textContent = option;
+                btn.onclick = () => chooseAnswer(i);
+                container.appendChild(btn);
+            });
+
+            document.getElementById("feedback-area").classList.add("hidden");
+            document.getElementById("next-btn").classList.add("hidden");
+            startTimer();
+        }
+
+        function startTimer() {
+            const progress = document.getElementById("timer-progress");
+            const timerEl = document.getElementById("timer");
+            timerEl.textContent = timer;
+            timerEl.classList.remove("text-red-400");
+            progress.style.strokeDashoffset = "0";
+
+            timerInterval = setInterval(() => {
+                timer--;
+                timerEl.textContent = timer;
+                const offset = ((60 - timer) / 60) * 113;
+                progress.style.strokeDashoffset = offset;
+
+                if (timer <= 10) timerEl.classList.add("text-red-400");
+
+                if (timer <= 0) {
+                    clearInterval(timerInterval);
+                    timeExpired();
+                }
+            }, 1000);
+        }
+
+        function timeExpired() {
+            document.getElementById("feedback-area").innerHTML = `<span class="text-red-400">⏰ Waktu habis!</span>`;
+            document.getElementById("feedback-area").classList.remove("hidden");
+            document.getElementById("next-btn").classList.remove("hidden");
+            disableOptions();
+        }
+
+        function chooseAnswer(selected) {
+            clearInterval(timerInterval);
+            const q = questions[currentIndex];
+            const isCorrect = selected === q.ans;
+
+            if (isCorrect) {
+                score++;
+                playCorrectSound();
+                createConfetti();
+            } else {
+                playWrongSound();
+            }
+
+            const feedback = document.getElementById("feedback-area");
+            feedback.classList.remove("hidden");
+
+            if (isCorrect) {
+                feedback.innerHTML = `✅ <span class="text-green-400 font-bold">Benar sekali!</span>`;
+            } else {
+                feedback.innerHTML = `❌ Salah<br><small class="text-white/70">${q.exp}</small>`;
+            }
+
+            disableOptions();
+            document.getElementById("next-btn").classList.remove("hidden");
+            document.getElementById("live-score").textContent = score;
+        }
+
+        function disableOptions() {
+            document.querySelectorAll(".option-btn").forEach(btn => btn.disabled = true);
+        }
+
+        function nextQuestion() {
+            currentIndex++;
+            if (currentIndex < questions.length) {
+                showQuestion();
+            } else {
+                showResult();
+            }
+        }
+
+        function createConfetti() {
+            for (let i = 0; i < 40; i++) {
+                const c = document.createElement("div");
+                c.className = "confetti";
+                c.style.left = Math.random() * 100 + "vw";
+                c.style.background = ["#eab308","#ec4899","#a855f7","#22d3ee"][Math.floor(Math.random()*4)];
+                c.style.animationDuration = (Math.random() * 3 + 3) + "s";
+                document.body.appendChild(c);
+                setTimeout(() => c.remove(), 7000);
+            }
+        }
+
+        async function showResult() {
+            document.getElementById("quiz-screen").classList.add("hidden");
+            const res = document.getElementById("result-screen");
+            res.classList.remove("hidden");
+
+            const percent = Math.round((score / 15) * 100);
+            document.getElementById("final-score").textContent = `${score}/15`;
+
+            const emoji = document.getElementById("result-emoji");
+            const title = document.getElementById("result-title");
+            const subtitle = document.getElementById("result-subtitle");
+
+            if (percent >= 80) {
+                emoji.textContent = "🏆";
+                title.textContent = "Luar Biasa, " + playerName + "!";
+                subtitle.textContent = "Kamu sudah sangat menguasai algoritma!";
+            } else if (percent >= 60) {
+                emoji.textContent = "🌟";
+                title.textContent = "Bagus Sekali, " + playerName + "!";
+                subtitle.textContent = "Terus latihan ya!";
+            } else {
+                emoji.textContent = "💪";
+                title.textContent = "Semangat, " + playerName + "!";
+                subtitle.textContent = "Coba lagi, pasti bisa lebih baik!";
+            }
+
+            const stars = document.getElementById("star-container");
+            stars.innerHTML = "";
+            const starCount = Math.floor(percent / 20);
+            for (let i = 0; i < 5; i++) {
+                const s = document.createElement("span");
+                s.textContent = "★";
+                s.className = i < starCount ? "text-yellow-300" : "text-white/30";
+                stars.appendChild(s);
+            }
+
+            // Kirim nilai ke Google Sheets
+            await kirimNilai(percent);
+        }
+
+        async function kirimNilai(percent) {
+            // Jika URL belum diisi, skip
+            if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL === "GANTI_DENGAN_URL_APPS_SCRIPT_KAMU") {
+                tampilStatusPengiriman("warning", "⚠️ URL Google Script belum dikonfigurasi. Nilai tidak terkirim.");
+                return;
+            }
+
+            const endTime = new Date();
+            const durasiMenit = Math.round((endTime - startTime) / 60000);
+            const tanggal = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
+
+            const payload = {
+                nama: playerName,
+                kelas: "Kelas " + currentKelas,
+                skor: score,
+                total: 15,
+                nilai: percent,
+                durasi: durasiMenit + " menit",
+                tanggal: tanggal
+            };
+
+            document.getElementById("sending-overlay").classList.remove("hidden");
+
+            try {
+                await fetch(GOOGLE_SCRIPT_URL, {
+                    method: "POST",
+                    mode: "no-cors",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+
+                document.getElementById("sending-overlay").classList.add("hidden");
+                tampilStatusPengiriman("success", "✅ Nilai berhasil dikirim ke Google Sheets!");
+            } catch (err) {
+                document.getElementById("sending-overlay").classList.add("hidden");
+                tampilStatusPengiriman("error", "❌ Gagal mengirim nilai. Cek koneksi internet.");
+                console.error("Error kirim nilai:", err);
+            }
+        }
+
+        function tampilStatusPengiriman(type, pesan) {
+            const el = document.getElementById("send-status");
+            el.classList.remove("hidden");
+
+            if (type === "success") {
+                el.className = "mb-8 text-xl px-6 py-4 rounded-2xl bg-green-500/20 border border-green-400 text-green-300";
+            } else if (type === "error") {
+                el.className = "mb-8 text-xl px-6 py-4 rounded-2xl bg-red-500/20 border border-red-400 text-red-300";
+            } else {
+                el.className = "mb-8 text-xl px-6 py-4 rounded-2xl bg-yellow-500/20 border border-yellow-400 text-yellow-300";
+            }
+
+            el.textContent = pesan;
+        }
+
+        function exportPDF() {
+            const percent = Math.round((score / 15) * 100);
+            const date = new Date().toLocaleDateString('id-ID');
+
+            const win = window.open("", "_blank");
+            win.document.write(`
+                <div style="padding:60px; text-align:center; background:linear-gradient(135deg, #4f46e5, #c026d3); color:white; font-family:Arial; min-height:100vh;">
+                    <h1 style="font-size:60px; margin-bottom:20px;">🏆 SERTIFIKAT</h1>
+                    <p style="font-size:28px;">Telah menyelesaikan Kuis Algoritma Pemrograman</p>
+                    <h2 style="font-size:42px; margin:40px 0;">${playerName}</h2>
+                    <div style="font-size:80px; font-weight:bold; margin:30px 0;">${score}/15 (${percent}%)</div>
+                    <p style="font-size:24px;">Kelas ${currentKelas} SMP • ${date}</p>
+                    <p style="margin-top:80px; font-size:20px;">EduQuiz • Informatika SMP</p>
+                </div>
+            `);
+            win.document.close();
+            setTimeout(() => win.print(), 800);
+        }
+
+        function restartQuiz() {
+            document.getElementById("result-screen").classList.add("hidden");
+            document.getElementById("send-status").classList.add("hidden");
+            document.getElementById("name-screen").classList.remove("hidden");
+            document.getElementById("nama-input").value = "";
+        }
+
+        function backToNameScreen() {
+            location.reload();
+        }
+
+        window.onload = () => {
+            console.log("%cEduQuiz v2 dengan Google Sheets integration siap!", "color:#eab308; font-size:16px; font-weight:bold");
+        };
+    </script>
+</body>
+</html>
